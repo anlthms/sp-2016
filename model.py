@@ -23,8 +23,40 @@ from sklearn import metrics
 from indexer import Indexer
 
 
+def run(tain, test):
+    init = Gaussian(scale=0.01)
+    strides =  dict(str_h=1, str_w=2)
+    common = dict(batch_norm=True, activation=Rectlin())
+    layers = [Conv((3, 5, 64), init=init, activation=Rectlin(), strides=dict(str_h=1, str_w=4)),
+              Pooling(2, strides=2),
+              Conv((3, 3, 64), init=init, strides=strides, **common),
+              Conv((3, 3, 128), init=init, strides=strides, **common),
+              Conv((3, 3, 128), init=init, strides=strides, **common),
+              Conv((3, 3, 256), init=init, **common),
+              Conv((3, 3, 256), init=init, **common),
+              DeepBiRNN(32, init=GlorotUniform(), reset_cells=True, depth=5, **common),
+              Reshape((1, 64, -1)),
+              Conv((1, 3, 256), init=init, strides=dict(str_h=1, str_w=2), **common),
+              Conv((1, 3, 128), init=init, **common),
+              Conv((1, 3, 64), init=init, **common),
+              Conv((1, 3, 32), init=init, **common),
+              Conv((1, 3, 16), init=init, **common),
+              Conv((1, 2, 8), init=init, **common),
+              Affine(nout=2, init=init, activation=Softmax())]
+
+    model = Model(layers=layers)
+    opt = Adagrad(learning_rate=0.01)
+    callbacks = Callbacks(model, eval_set=test, **args.callback_args)
+    cost = GeneralizedCost(costfunc=CrossEntropyBinary())
+
+    model.fit(tain, optimizer=opt, num_epochs=args.epochs, cost=cost, callbacks=callbacks)
+    return model
+
+
 parser = NeonArgparser(__doc__)
 parser.add_argument('-elec', '--electrode', default=0, help='electrode index')
+parser.add_argument('-skip', '--skip_test', action="store_true",
+                    help="skip testing (validation mode)")
 args = parser.parse_args()
 pattern = '*.' + str(args.electrode) + '.wav'
 data_dir = args.data_dir
@@ -33,54 +65,37 @@ if data_dir[-1] != '/':
 subj = int(data_dir[-2])
 assert subj in [1, 2, 3]
 indexer = Indexer(data_dir, [args.electrode])
-tain_idx, eval_idx, test_idx = indexer.run(data_dir, pattern)
+tain_idx, test_idx = indexer.run(data_dir, pattern)
 
 fs = 400
 cd = 240000 * 1000 / fs
 common_params = dict(sampling_freq=fs, clip_duration=cd, frame_duration=512)
 tain_params = AudioParams(**common_params)
-eval_params = AudioParams(**common_params)
+test_params = AudioParams(**common_params)
 common = dict(target_size=1, nclasses=2)
-test_dir = data_dir.replace('train', 'test')
 tain = DataLoader(set_name='tain', media_params=tain_params, index_file=tain_idx,
                   repo_dir=data_dir, shuffle=True, **common)
-eval = DataLoader(set_name='eval', media_params=eval_params, index_file=eval_idx,
+test = DataLoader(set_name='eval', media_params=test_params, index_file=test_idx,
                   repo_dir=data_dir, **common)
-init = Gaussian(scale=0.01)
-strides =  dict(str_h=1, str_w=2)
-bn = dict(batch_norm=True, activation=Rectlin())
-layers = [Conv((3, 5, 64), init=init, activation=Rectlin(), strides=dict(str_h=1, str_w=4)),
-          Pooling(2, strides=2),
-          Conv((3, 3, 64), init=init, strides=strides, **bn),
-          Conv((3, 3, 128), init=init, strides=strides, **bn),
-          Conv((3, 3, 128), init=init, strides=strides, **bn),
-          Conv((3, 3, 256), init=init, **bn),
-          Conv((3, 3, 256), init=init, **bn),
-          DeepBiRNN(32, init=GlorotUniform(), reset_cells=True, depth=5, **bn),
-          Reshape((1, 64, -1)),
-          Conv((1, 3, 256), init=init, strides=dict(str_h=1, str_w=2), **bn),
-          Conv((1, 3, 128), init=init, **bn),
-          Conv((1, 3, 64), init=init, **bn),
-          Conv((1, 3, 32), init=init, **bn),
-          Conv((1, 3, 16), init=init, **bn),
-          Conv((1, 2, 8), init=init, **bn),
-          Affine(nout=common['nclasses'], init=init, activation=Softmax())]
-
-model = Model(layers=layers)
-opt = Adagrad(learning_rate=0.01)
-callbacks = Callbacks(model, eval_set=eval, **args.callback_args)
-cost = GeneralizedCost(costfunc=CrossEntropyBinary())
-
-model.fit(tain, optimizer=opt, num_epochs=args.epochs, cost=cost, callbacks=callbacks)
-preds = model.get_outputs(eval)[:, 1]
-labels = np.loadtxt(eval_idx, delimiter=',', skiprows=1, usecols=[1])
-print('Eval AUC for subject %d: %.4f' % (metrics.roc_auc_score(labels, preds), subj))
+model = run(tain, test)
+preds = model.get_outputs(test)[:, 1]
+labels = np.loadtxt(test_idx, delimiter=',', skiprows=1, usecols=[1])
+print('Eval AUC for subject %d: %.4f' % (subj, metrics.roc_auc_score(labels, preds)))
 
 eval_preds = os.path.join(data_dir, 'eval.' + str(args.electrode) + '.npy')
 np.save(eval_preds, preds)
+if args.skip_test == True:
+    print('Done')
+    sys.exit(0)
 
-test = DataLoader(set_name='test', media_params=eval_params, index_file=test_idx,
+test_dir = data_dir.replace('train', 'test')
+tain_idx, test_idx = indexer.run(data_dir, pattern, testing=True)
+tain = DataLoader(set_name='full', media_params=tain_params, index_file=tain_idx,
+                  repo_dir=data_dir, shuffle=True, **common)
+test = DataLoader(set_name='test', media_params=test_params, index_file=test_idx,
                   repo_dir=test_dir, **common)
-preds = model.get_outputs(test)[:, 1]
+model = run(tain, test)
+test_preds = model.get_outputs(test)[:, 1]
 test_file = 'test.' + str(subj) + '.' + str(args.electrode) + '.npy'
-np.save(test_file, preds)
+np.save(test_file, test_preds)
+print('Done')
