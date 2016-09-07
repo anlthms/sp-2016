@@ -10,7 +10,7 @@ Seizure Prediction
 
 These steps take about 30 minutes on a system with 4 processors, a single GPU and a spinning hard-disk. **Tested only on Ubuntu**.
 
-1. Download and install neon 1.5.4
+1. Download and install neon **1.5.4**
 
     ```
     git clone https://github.com/NervanaSystems/neon.git
@@ -20,6 +20,7 @@ These steps take about 30 minutes on a system with 4 processors, a single GPU an
     source .venv/bin/activate
     ```
 2. Verify neon installation
+
     Make sure that this command does not result in any errors:
     ```
     ./examples/cifar10_msra.py -e1
