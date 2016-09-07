@@ -26,7 +26,7 @@ do
     fi
 
     echo Processing subject $subj...
-    ./model.py -e $num_epochs -w $train_dir -r 0 -z 64 -v -elec $elec
+    ./model.py -e $num_epochs -w $train_dir -r 0 -z 64 -v --no_progress_bar -elec $elec
 done
 
 # Generate submission file.
