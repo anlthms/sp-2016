@@ -8,19 +8,19 @@ Seizure Prediction
 
 ### Usage
 
-These steps take about 30 minutes on a system with 4 processors and a single GPU. **Tested only on Ubuntu**.
+These steps take about 30 minutes on a system with 4 processors, a single GPU and a spinning hard-disk. **Tested only on Ubuntu**.
 
-1. Download and install neon 1.5.5
+1. Download and install neon 1.5.4
 
     ```
     git clone https://github.com/NervanaSystems/neon.git
     cd neon
-    git checkout v1.5.5
+    git checkout v1.5.4
     make
     source .venv/bin/activate
     ```
 2. Verify neon installation
-    Make sure that no errors are printed from running this command:
+    Make sure that this command does not result in any errors:
     ```
     ./examples/cifar10_msra.py -e1
     ```
@@ -28,11 +28,11 @@ These steps take about 30 minutes on a system with 4 processors and a single GPU
 3. Install prerequisites
 
     ```
-    pip install sklearn scikits.audiolab
+    pip install scipy sklearn scikits.audiolab
     ```
 4. Download the data files from [Kaggle](https://www.kaggle.com/c/melbourne-university-seizure-prediction/data):
 
-    Save all files to a directory (we will refer to this directory as /path/to/data) and unzip the .zip files.
+    Save all files to a directory (referred to as /path/to/data below) and unzip the .zip files.
 
 5. Clone this repository
 
@@ -50,9 +50,10 @@ These steps take about 30 minutes on a system with 4 processors and a single GPU
     Submit subm.csv to [Kaggle](https://www.kaggle.com/c/melbourne-university-seizure-prediction/submissions/attach)
 
 ### Notes
-- The model requires 4GB of device memory.
+- The model requires 3GB of device memory.
 - If using AWS, see slide 10 on [this deck] (https://github.com/anlthms/meetup2/blob/master/audio-pattern-recognition.pdf) for instructions on how to configure an EC2 instance.
-- The first run takes longer due to conversion of .mat files into .wav files. Once the data is prepared, subsequent runs can complete in less than 15 minutes.
+- The first run takes longer due to conversion of .mat files into .wav files.
 - Conversion of data to spectrograms is performed on the fly by neon.
 - As provided, the run.sh script uses data from the first electrode. This means that only 1/16th of the data is used.
-- A leaderboard AUC score of 0.56 may be obtained by using this code as is.
+- If using a different electrode, use clear.sh to delete cached data files.
+- A leaderboard AUC score of 0.5864 may be obtained by using this code as is.

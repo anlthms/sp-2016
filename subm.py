@@ -23,4 +23,3 @@ with open('subm.csv', 'w') as fd:
         fd.write('%.4e' % preds[i])
         fd.write('\n')
 print('Wrote subm.csv')
-

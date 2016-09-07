@@ -10,7 +10,7 @@ from scikits import audiolab
 
 
 class Indexer:
-    def  __init__(self, data_dir, elecs=range(16)):
+    def __init__(self, data_dir, elecs=range(16)):
         self.data_dir = data_dir
         self.elecs = elecs
 
@@ -19,7 +19,7 @@ class Indexer:
             return filename.split('.')[0].split('_')
 
         assert os.path.exists(tain_path)
-        if testing == True:
+        if testing is True:
             test_path = tain_path.replace('train', 'test')
             assert os.path.exists(test_path)
             tain_idx = os.path.join(tain_path, 'full-index.csv')
@@ -31,13 +31,13 @@ class Indexer:
         if os.path.exists(tain_idx) and os.path.exists(test_idx):
             return tain_idx, test_idx
 
-        if testing == False:
+        if testing is False:
             self.extract(tain_path)
         files = glob.glob(os.path.join(tain_path, pattern))
         files = map(os.path.basename, files)
         files = sorted(files)
 
-        if testing == True:
+        if testing is True:
             self.extract(test_path)
             with open(tain_idx, 'w') as tain_fd:
                 tain_fd.write('filename,label\n')
@@ -81,17 +81,15 @@ class Indexer:
             print('Could not load %s' % srcfile)
             return
 
-        dat = mat['dataStruct'][0,0][0]
+        dat = mat['dataStruct'][0, 0][0]
+        mn = dat.min()
+        mx = dat.max()
+        mx = max(abs(mx), abs(mn))
+        if mx != 0:
+            dat *= 0x7FFF / mx
+        dat = np.int16(dat)
+
         for elec in self.elecs:
             dstfile = srcfile.replace('mat', str(elec) + '.wav')
-
             aud = dat[:, elec]
-            min = aud.min()
-            if -min > 0x8000:
-                aud *= 0x8000 / -min
-
-            max = aud.max()
-            if max > 0x7FFF:
-                aud *= 0x7FFF / max
-            aud = np.int16(aud)
             audiolab.wavwrite(aud, dstfile, fs=400, enc='pcm16')

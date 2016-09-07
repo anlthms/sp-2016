@@ -9,11 +9,12 @@ Usage:
 
 import os
 import glob
+import sys
 import numpy as np
 from neon.util.argparser import NeonArgparser
 from neon.initializers import Gaussian, GlorotUniform
 from neon.layers import Conv, Pooling, GeneralizedCost, Affine
-from neon.layers import DeepBiRNN, Reshape
+from neon.layers import DeepBiRNN, RecurrentMean
 from neon.optimizers import Adagrad
 from neon.transforms import Rectlin, Softmax, CrossEntropyBinary
 from neon.models import Model
@@ -24,28 +25,24 @@ from indexer import Indexer
 
 
 def run(tain, test):
-    init = Gaussian(scale=0.01)
-    strides =  dict(str_h=1, str_w=2)
+    gauss = Gaussian(scale=0.01)
+    glorot = GlorotUniform()
+    tiny = dict(str_h=1, str_w=1)
+    small = dict(str_h=1, str_w=2)
+    big = dict(str_h=1, str_w=4)
     common = dict(batch_norm=True, activation=Rectlin())
-    layers = [Conv((3, 5, 64), init=init, activation=Rectlin(), strides=dict(str_h=1, str_w=4)),
+    layers = [Conv((3, 5, 64), init=gauss, activation=Rectlin(), strides=big),
               Pooling(2, strides=2),
-              Conv((3, 3, 64), init=init, strides=strides, **common),
-              Conv((3, 3, 128), init=init, strides=strides, **common),
-              Conv((3, 3, 128), init=init, strides=strides, **common),
-              Conv((3, 3, 256), init=init, **common),
-              Conv((3, 3, 256), init=init, **common),
-              DeepBiRNN(32, init=GlorotUniform(), reset_cells=True, depth=5, **common),
-              Reshape((1, 64, -1)),
-              Conv((1, 3, 256), init=init, strides=dict(str_h=1, str_w=2), **common),
-              Conv((1, 3, 128), init=init, **common),
-              Conv((1, 3, 64), init=init, **common),
-              Conv((1, 3, 32), init=init, **common),
-              Conv((1, 3, 16), init=init, **common),
-              Conv((1, 2, 8), init=init, **common),
-              Affine(nout=2, init=init, activation=Softmax())]
+              Conv((3, 3, 128), init=gauss, strides=small, **common),
+              Pooling(2, strides=2),
+              Conv((3, 3, 256), init=gauss, strides=small, **common),
+              Conv((2, 2, 512), init=gauss, strides=tiny, **common),
+              DeepBiRNN(128, init=glorot, reset_cells=True, depth=3, **common),
+              RecurrentMean(),
+              Affine(nout=2, init=gauss, activation=Softmax())]
 
     model = Model(layers=layers)
-    opt = Adagrad(learning_rate=0.01)
+    opt = Adagrad(learning_rate=0.001)
     callbacks = Callbacks(model, eval_set=test, **args.callback_args)
     cost = GeneralizedCost(costfunc=CrossEntropyBinary())
 
@@ -70,7 +67,7 @@ tain_idx, test_idx = indexer.run(data_dir, pattern)
 fs = 400
 cd = 240000 * 1000 / fs
 common_params = dict(sampling_freq=fs, clip_duration=cd, frame_duration=512)
-tain_params = AudioParams(**common_params)
+tain_params = AudioParams(random_scale_percent=5.0, **common_params)
 test_params = AudioParams(**common_params)
 common = dict(target_size=1, nclasses=2)
 tain = DataLoader(set_name='tain', media_params=tain_params, index_file=tain_idx,
@@ -84,8 +81,7 @@ print('Eval AUC for subject %d: %.4f' % (subj, metrics.roc_auc_score(labels, pre
 
 eval_preds = os.path.join(data_dir, 'eval.' + str(args.electrode) + '.npy')
 np.save(eval_preds, preds)
-if args.skip_test == True:
-    print('Done')
+if args.skip_test is True:
     sys.exit(0)
 
 test_dir = data_dir.replace('train', 'test')
@@ -98,4 +94,3 @@ model = run(tain, test)
 test_preds = model.get_outputs(test)[:, 1]
 test_file = 'test.' + str(subj) + '.' + str(args.electrode) + '.npy'
 np.save(test_file, test_preds)
-print('Done')

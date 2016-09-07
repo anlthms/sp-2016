@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 #
 # Build per-subject models and combine predictions into a submission file.
 #
@@ -25,6 +25,7 @@ do
         exit
     fi
 
+    echo Processing subject $subj...
     ./model.py -e $num_epochs -w $train_dir -r 0 -z 64 -v -elec $elec
 done
 
