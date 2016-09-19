@@ -4,11 +4,12 @@ Seizure Prediction
 
 - [Competition page at Kaggle](https://www.kaggle.com/c/melbourne-university-seizure-prediction)
 - This is a proof-of-concept for applying deep learning techniques to EEG data converted into spectrograms.
-- This code builds a separate model for each subject (there are three subjects).
+- This code builds a separate model for each subject (there are three subjects) and each electrode.
+- Predictions based on all electrodes are averaged to arrive at the final prediction.
 
 ### Usage
 
-These steps take about 30 minutes on a system with 4 processors, a single GPU and a spinning hard-disk. **Tested only on Ubuntu**.
+These steps take about 4 hours on a system with 4 processors, a single GPU and a spinning hard-disk. **Tested only on Ubuntu**.
 
 1. Download and install [neon](https://github.com/NervanaSystems/neon) **1.5.4**
 
@@ -44,8 +45,11 @@ These steps take about 30 minutes on a system with 4 processors, a single GPU an
 6. Train models and generate predictions
 
     ```
-    ./run.sh /path/to/data
+    ./run.sh /path/to/data /path/to/output
     ```
+    where /path/to/data must contain the data subdirectories (train_1, train_2 etc.) as well as sample_submission.csv
+    and /path/to/output is a new directory that will be created to store intermediate output files.
+
 7. Evaluate predictions
 
     Submit subm.csv to [Kaggle](https://www.kaggle.com/c/melbourne-university-seizure-prediction/submissions/attach)
@@ -55,6 +59,4 @@ These steps take about 30 minutes on a system with 4 processors, a single GPU an
 - If using AWS, see slide 10 on [this deck] (https://github.com/anlthms/meetup2/blob/master/audio-pattern-recognition.pdf) for instructions on how to configure an EC2 instance.
 - The first run takes longer due to conversion of .mat files into .wav files.
 - Conversion of data to spectrograms is performed on the fly by neon.
-- As provided, the run.sh script uses data from the first electrode. This means that only 1/16th of the data is used.
-- If using a different electrode, use clear.sh to delete cached data files.
-- A leaderboard AUC score of 0.5864 may be obtained by using this code as is.
+- A leaderboard AUC score of 0.64 may be obtained by using this code as is.
