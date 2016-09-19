@@ -10,4 +10,4 @@ then
 fi
 
 data_dir=$1
-rm -ivr $data_dir/train_?/tain-* $data_dir/train_?/eval-* $data_dir/train_?/full-* $data_dir/test_?/test-*
+rm -ivrf $data_dir/train_?/tain-* $data_dir/train_?/eval-* $data_dir/train_?/full-* $data_dir/test_?/test-*
