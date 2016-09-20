@@ -44,5 +44,6 @@ if len(sys.argv) < 2:
     sys.exit(0)
 
 for subj_id in range(1, 4):
-    path = os.path.join(sys.argv[1], 'train_' + str(subj_id))
-    extract(path)
+    for prefix in ['train_', 'test_']:
+        path = os.path.join(sys.argv[1], prefix + str(subj_id))
+        extract(path)
