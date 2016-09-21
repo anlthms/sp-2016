@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 #
 # Build per-subject models for each electrode and combine predictions into a submission file.
 #

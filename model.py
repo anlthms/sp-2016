@@ -81,7 +81,6 @@ preds = model.get_outputs(test)[:, 1]
 
 if args.test_mode:
     preds_name = 'test.'
-    auc = 0
 else:
     preds_name = 'eval.'
     labels = np.loadtxt(test_idx, delimiter=',', skiprows=1, usecols=[1])
@@ -90,4 +89,3 @@ else:
 
 preds_file = preds_name + str(subj) + '.' + str(args.electrode) + '.npy'
 np.save(os.path.join(out_dir, preds_file), preds)
-sys.exit(int(round(auc*100)))

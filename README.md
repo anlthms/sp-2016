@@ -45,7 +45,7 @@ These steps take about 4 hours on a system with 4 processors, a single GPU and a
 6. Train models and generate predictions
 
     ```
-    ./run.sh /path/to/data /path/to/output
+    ./run.sh /path/to/data /path/to/output 2>&1 | tee run.log
     ```
     where /path/to/data must contain the data subdirectories (train_1, train_2 etc.) as well as sample_submission.csv
     and /path/to/output is a new directory that will be created to store intermediate output files.
