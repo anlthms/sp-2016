@@ -28,6 +28,7 @@ class Indexer:
             return tain_idx, test_idx
 
         files = glob.glob(os.path.join(tain_path, pattern))
+        assert len(files) > 0, 'No .wav files found in %s' % tain_path
         files = map(os.path.basename, files)
         files = sorted(files)
 
@@ -42,6 +43,7 @@ class Indexer:
             with open(test_idx, 'w') as test_fd:
                 test_fd.write('filename,label\n')
                 files = glob.glob(os.path.join(test_path, pattern))
+                assert len(files) > 0, 'No .wav files found in %s' % test_path
                 files = map(os.path.basename, files)
                 files = sorted(files, key=lambda x: int(tokenize(x)[1]))
                 for idx, filename in enumerate(files):

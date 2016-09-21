@@ -13,8 +13,9 @@ from scikits import audiolab
 
 def extract(path):
     print('Extracting data into %s...' % path)
-    filelist = glob.glob(os.path.join(path, '*.mat'))
-    for srcfile in filelist:
+    files = glob.glob(os.path.join(path, '*.mat'))
+    assert len(files) > 0, 'No .mat files found in %s' % path
+    for srcfile in files:
         wavwrite(srcfile)
 
 
