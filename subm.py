@@ -44,7 +44,5 @@ with open('subm.csv', 'w') as fd:
     fd.write('File,Class\n')
     for i in range(len(files)):
         fd.write(files[i])
-        fd.write(',')
-        fd.write('%.4e' % preds[i])
-        fd.write('\n')
+        fd.write(',%.4e\n' % preds[i])
 print('Wrote subm.csv')

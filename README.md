@@ -11,12 +11,12 @@ Seizure Prediction
 
 These steps take about 4 hours on a system with 4 processors, a single GPU and a spinning hard-disk. **Tested only on Ubuntu**.
 
-1. Download and install [neon](https://github.com/NervanaSystems/neon) **1.5.4**
+1. Download and install [neon](https://github.com/NervanaSystems/neon) **1.6.0**
 
     ```
     git clone https://github.com/NervanaSystems/neon.git
     cd neon
-    git checkout v1.5.4
+    git checkout v1.6.0
     make
     source .venv/bin/activate
     ```

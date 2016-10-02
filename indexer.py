@@ -61,7 +61,7 @@ class Indexer:
                 assert len(files) > 0, 'No .wav files found in %s' % test_path
                 files = map(os.path.basename, files)
                 files = sorted(files, key=lambda x: int(tokenize(x)[1]))
-                for idx, filename in enumerate(files):
+                for filename in files:
                     test_fd.write(filename + ',0\n')
         else:
             # Split into training and validation subsets.
@@ -77,6 +77,6 @@ class Indexer:
                     segm = int(filename.split('_')[1])
                     hour = segm - (segm - 1) % 6
                     fd = tain_fd if hour in tain_hours else test_fd
-                    label = filename.split('.')[0].split('_')[-1]
+                    label = tokenize(filename)[-1]
                     fd.write(filename + ',' + label + '\n')
         return tain_idx, test_idx
