@@ -4,12 +4,11 @@ Seizure Prediction
 
 - [Competition page at Kaggle](https://www.kaggle.com/c/melbourne-university-seizure-prediction)
 - This is a proof-of-concept for applying deep learning techniques to EEG data converted into spectrograms.
-- This code builds a separate model for each subject (there are three subjects) and each electrode.
-- Predictions based on all electrodes are averaged to arrive at the final prediction.
+- This code builds a separate model for each subject (there are three subjects).
 
 ### Usage
 
-These steps take about 4 hours on a system with 4 processors, a single GPU and a spinning hard-disk. **Tested only on Ubuntu**.
+These steps take about 5 hours on a system with 4 processors, a single GPU and a spinning hard-disk. **Tested only on Ubuntu**.
 
 1. Download and install [neon](https://github.com/NervanaSystems/neon) **1.6.0**
 
@@ -41,6 +40,7 @@ These steps take about 4 hours on a system with 4 processors, a single GPU and a
     ```
     git clone https://github.com/anlthms/sp-2016.git
     cd sp-2016
+    git checkout all-electrodes
     ```
 6. Train models and generate predictions
 
@@ -55,8 +55,8 @@ These steps take about 4 hours on a system with 4 processors, a single GPU and a
     Submit subm.csv to [Kaggle](https://www.kaggle.com/c/melbourne-university-seizure-prediction/submissions/attach)
 
 ### Notes
-- The model requires 3GB of device memory.
+- The model requires 7GB of device memory (for a minibatch size of 64).
+- To reduce the memory requirement, set minibatch size to 32 (via the -z option)
 - If using AWS, see slide 10 on [this deck] (https://github.com/anlthms/meetup2/blob/master/audio-pattern-recognition.pdf) for instructions on how to configure an EC2 instance.
 - The first run takes longer due to conversion of .mat files into .wav files.
 - Conversion of data to spectrograms is performed on the fly by neon.
-- A leaderboard AUC score of 0.64 may be obtained by using this code as is.

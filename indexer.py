@@ -22,61 +22,85 @@ import numpy as np
 
 
 class Indexer:
-    def __init__(self):
-        pass
+    def __init__(self, repo_dir, subj, validate_mode, training):
+        self.repo_dir = repo_dir
+        self.subj = subj
+        self.validate_mode = validate_mode
+        self.training = training
 
-    def run(self, tain_path, pattern, testing=False, train_percent=70):
+    def get_filename(self, tain_path, test_path, elec):
+        def get_path(basepath, name, elec):
+            filename = name + '-' + str(self.subj) + '-' + str(elec) + '-index.csv'
+            return os.path.join(basepath, filename)
+
+        assert os.path.exists(tain_path), 'Path not found: %s' % tain_path
+        if self.training:
+            if self.validate_mode:
+                idx_file = get_path(tain_path, 'tain', elec)
+            else:
+                idx_file = get_path(tain_path, 'full', elec)
+        else:
+            if self.validate_mode:
+                idx_file = get_path(tain_path, 'eval', elec)
+            else:
+                assert os.path.exists(test_path), 'Path not found: %s' % test_path
+                idx_file = get_path(test_path, 'test', elec)
+        return idx_file
+
+    def run(self, elec, train_percent=70):
         def tokenize(filename):
             return filename.split('.')[0].split('_')
 
-        assert os.path.exists(tain_path)
-        if testing is True:
-            test_path = tain_path.replace('train', 'test')
-            assert os.path.exists(test_path)
-            tain_idx = os.path.join(tain_path, 'full-index.csv')
-            test_idx = os.path.join(test_path, 'test-index.csv')
-        else:
-            tain_idx = os.path.join(tain_path, 'tain-index.csv')
-            test_idx = os.path.join(tain_path, 'eval-index.csv')
+        def get_segm(filename):
+            return int(tokenize(filename)[1])
 
-        if os.path.exists(tain_idx) and os.path.exists(test_idx):
-            return tain_idx, test_idx
+        def get_label(filename):
+            return tokenize(filename)[-1]
 
-        files = glob.glob(os.path.join(tain_path, pattern))
-        assert len(files) > 0, 'No .wav files found in %s' % tain_path
-        files = map(os.path.basename, files)
-        files = sorted(files)
+        tain_path = self.repo_dir
+        test_path = tain_path.replace('train', 'test')
 
-        np.random.seed(0)
-        np.random.shuffle(files)
-        if testing is True:
-            with open(tain_idx, 'w') as tain_fd:
-                tain_fd.write('filename,label\n')
-                for filename in files:
-                    label = tokenize(filename)[-1]
-                    tain_fd.write(filename + ',' + label + '\n')
-            with open(test_idx, 'w') as test_fd:
-                test_fd.write('filename,label\n')
-                files = glob.glob(os.path.join(test_path, pattern))
-                assert len(files) > 0, 'No .wav files found in %s' % test_path
-                files = map(os.path.basename, files)
-                files = sorted(files, key=lambda x: int(tokenize(x)[1]))
-                for filename in files:
-                    test_fd.write(filename + ',0\n')
-        else:
+        idx_file = self.get_filename(tain_path, test_path, elec)
+        if os.path.exists(idx_file):
+            return idx_file
+
+        print('Creating %s...' % idx_file)
+        path = tain_path if (self.training or self.validate_mode) else test_path
+        pattern = '*.' + str(elec) + '.wav'
+        files = glob.glob(os.path.join(path, pattern))
+        assert len(files) > 0, 'No .wav files found in %s' % path
+        files = sorted(map(os.path.basename, files))
+        files = sorted(files, key=lambda x: get_segm(x))
+
+        if self.training:
+            np.random.seed(0)
+            np.random.shuffle(files)
+
+        labels = []
+        if self.validate_mode:
             # Split into training and validation subsets.
-            with open(tain_idx, 'w') as tain_fd, open(test_idx, 'w') as test_fd:
-                tain_fd.write('filename,label\n')
-                test_fd.write('filename,label\n')
-                segms = np.unique([int(f.split('_')[1]) for f in files])
-                hours = range(segms.min(), segms.max() + 1, 6)
-                np.random.shuffle(hours)
-                tain_count = (len(hours) * train_percent) // 100
-                tain_hours = hours[:tain_count]
-                for filename in files:
-                    segm = int(filename.split('_')[1])
-                    hour = segm - (segm - 1) % 6
-                    fd = tain_fd if hour in tain_hours else test_fd
-                    label = tokenize(filename)[-1]
-                    fd.write(filename + ',' + label + '\n')
-        return tain_idx, test_idx
+            segms = np.unique([get_segm(f) for f in files])
+            # Make sure that segments from the same hour go into the same subset.
+            hours = range(segms.min(), segms.max() + 1, 6)
+            np.random.seed(0)
+            np.random.shuffle(hours)
+            tain_count = (len(hours) * train_percent) // 100
+            chosen_hours = hours[:tain_count] if self.training else hours[tain_count:]
+            chosen_files = []
+            for filename in files:
+                segm = get_segm(filename)
+                hour = segm - (segm - 1) % 6
+                if hour in chosen_hours:
+                    chosen_files.append(filename)
+                    labels.append(get_label(filename))
+        else:
+            chosen_files = files
+            for filename in files:
+                label = get_label(filename) if self.training else '0'
+                labels.append(label)
+
+        with open(idx_file, 'w') as fd:
+            fd.write('filename,label\n')
+            for filename, label in zip(chosen_files, labels):
+                fd.write(filename + ',' + label + '\n')
+        return idx_file

@@ -22,8 +22,12 @@ import sys
 import os
 import glob
 import numpy as np
-from scipy import io
+from scipy import io, signal
 from scikits import audiolab
+
+
+# Downsampling factor
+ds_factor = 1
 
 
 def extract(path):
@@ -41,7 +45,11 @@ def wavwrite(srcfile):
         print('Could not load %s' % srcfile)
         return
 
+    fs = 400
     dat = mat['dataStruct'][0, 0][0]
+    if ds_factor != 1:
+        dat = signal.decimate(dat, ds_factor, axis=0, zero_phase=True)
+        fs /= ds_factor
     mn = dat.min()
     mx = dat.max()
     mx = float(max(abs(mx), abs(mn)))
@@ -52,14 +60,14 @@ def wavwrite(srcfile):
     for elec in range(16):
         dstfile = srcfile.replace('mat', str(elec) + '.wav')
         aud = dat[:, elec]
-        audiolab.wavwrite(aud, dstfile, fs=400, enc='pcm16')
+        audiolab.wavwrite(aud, dstfile, fs=fs, enc='pcm16')
 
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print('Usage %s /path/to/data' % sys.argv[0])
+        sys.exit(0)
 
-if len(sys.argv) < 2:
-    print('Usage %s /path/to/data' % sys.argv[0])
-    sys.exit(0)
-
-for subj_id in range(1, 4):
-    for prefix in ['train_', 'test_']:
-        path = os.path.join(sys.argv[1], prefix + str(subj_id))
-        extract(path)
+    for subj_id in range(1, 4):
+        for prefix in ['train_', 'test_']:
+            path = os.path.join(sys.argv[1], prefix + str(subj_id))
+            extract(path)
