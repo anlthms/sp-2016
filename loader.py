@@ -51,12 +51,11 @@ class EegLoader(NervanaDataIterator):
         self.shape_list = list(media_params.get_shape())
         self.shape_list[0] = nelecs
         self.shape = tuple(self.shape_list)
-        datum_size = nelecs * media_params.datum_size()
-        self.data = self.be.iobuf(datum_size, dtype=np.float32)
-        self.data_shape = (nelecs, self.data.shape[0] // nelecs, -1)
+        datum_size = media_params.datum_size()
+        self.data = self.be.iobuf(nelecs*datum_size, dtype=np.float32)
+        self.data_shape = (nelecs, datum_size, -1)
         self.data_view = self.data.reshape(self.data_shape)
         self.ndata = self.loaders[0].ndata
-        self.start_idx = self.loaders[0].start_idx
 
     def start(self):
         map(DataLoader.start, self.loaders)
@@ -77,5 +76,5 @@ class EegLoader(NervanaDataIterator):
         return self.data, targets
 
     def __iter__(self):
-        for start in range(self.start_idx, self.ndata, self.be.bsz):
+        for start in range(self.loaders[0].start_idx, self.ndata, self.be.bsz):
             yield self.next(start)
