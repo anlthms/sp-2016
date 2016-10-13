@@ -55,8 +55,7 @@ These steps take about 4 hours on a system with 4 processors, a single GPU and a
     Submit subm.csv to [Kaggle](https://www.kaggle.com/c/melbourne-university-seizure-prediction/submissions/attach)
 
 ### Notes
-- The model requires 3GB of device memory.
+- The model requires 8GB of device memory.
 - If using AWS, see slide 10 on [this deck] (https://github.com/anlthms/meetup2/blob/master/audio-pattern-recognition.pdf) for instructions on how to configure an EC2 instance.
 - The first run takes longer due to conversion of .mat files into .wav files.
 - Conversion of data to spectrograms is performed on the fly by neon.
-- A leaderboard AUC score of 0.64 may be obtained by using this code as is.
