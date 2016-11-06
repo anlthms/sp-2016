@@ -35,7 +35,8 @@ def init(repo_dir, validate_mode, training):
     else:
         media_params = AudioParams(**common_params)
         set_name = 'eval' if validate_mode else 'test'
-        data_dir = repo_dir if validate_mode else repo_dir.replace('train', 'test')
+        data_dir = repo_dir if validate_mode else repo_dir.replace('train', 'test') + '_new'
+    data_dir += '/'
     return media_params, set_name, data_dir
 
 
@@ -58,11 +59,11 @@ class MultiLoader(NervanaDataIterator):
             elecs = [elecs]
         nelecs = len(elecs)
         self.elecs = elecs
-        media_params, set_name, data_dir = init(repo_dir, validate_mode, training)
+        media_params, set_name_prefix, data_dir = init(repo_dir, validate_mode, training)
         indexer = Indexer(repo_dir, subj, validate_mode, training)
         self.loaders = []
         for elec in elecs:
-            set_name = set_name + '-' + str(subj) + '-' + str(elec)
+            set_name = set_name_prefix + '-' + str(subj) + '-' + str(elec)
             index_file = indexer.run(elec, set_name)
             loader = DataLoader(set_name=set_name,
                                 media_params=media_params, index_file=index_file,

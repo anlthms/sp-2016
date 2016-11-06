@@ -30,6 +30,7 @@ out_dir=$2
 num_epochs=4
 bsz=64
 prep_file=$data_dir/prepdone
+elec=-1
 set -x
 
 if [ -f $prep_file ]
@@ -41,25 +42,21 @@ else
     touch $prep_file
 fi
 
-for elec in `seq 0 15`
+for subj in `seq 1 3`
 do
-    echo Electrode $elec...
-    for subj in `seq 1 3`
-    do
-        train_dir=$data_dir/train_$subj/
+    train_dir=$data_dir/train_$subj/
 
-        if [ ! -e $train_dir ]
-        then
-            echo $train_dir not found!
-            exit
-        fi
+    if [ ! -e $train_dir ]
+    then
+        echo $train_dir not found!
+        exit
+    fi
 
-        echo Processing subject $subj...
-        # Validate
-        ./model.py -e $num_epochs -w $train_dir -r 1 -z $bsz -v --no_progress_bar -elec $elec -out $out_dir -eval 1 -validate
-        # Test
-        ./model.py -e $num_epochs -w $train_dir -r 1 -z $bsz -v --no_progress_bar -elec $elec -out $out_dir
-    done
+    echo Processing subject $subj...
+    # Validate
+    ./model.py -e $num_epochs -w $train_dir -r 0 -z $bsz -v --no_progress_bar -elec $elec -out $out_dir -eval 1 -validate
+    # Test
+    ./model.py -e $num_epochs -w $train_dir -r 0 -z $bsz -v --no_progress_bar -elec $elec -out $out_dir
 done
 
-./subm.py sample_submission.csv $out_dir
+./subm.py $data_dir/sample_submission.csv $out_dir

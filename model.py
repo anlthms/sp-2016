@@ -19,7 +19,7 @@ Train a per-subject model for:
 https://www.kaggle.com/c/melbourne-university-seizure-prediction
 
 Usage:
-    ./model.py -e 16 -w </path/to/data> -r 0 -z 64 -elec <electrode index>
+    ./model.py -e 4 -w </path/to/data> -r 0 -z 64 -elec <electrode index or -1>
 """
 
 import os
@@ -30,12 +30,26 @@ from neon.initializers import Gaussian, GlorotUniform
 from neon.layers import Conv, Pooling, GeneralizedCost, Affine
 from neon.layers import DeepBiRNN, RecurrentMean, Dropout
 from neon.optimizers import Adagrad
-from neon.transforms import Rectlin, Softmax, CrossEntropyBinary
+from neon.transforms import Rectlin, Softmax, SumSquared
 from neon.models import Model
-from neon.callbacks.callbacks import Callbacks
+from neon.callbacks.callbacks import Callback, Callbacks
 from sklearn import metrics
-from loader import SingleLoader as Loader
 
+
+class Evaluator(Callback):
+    def __init__(self, subj, data_dir, eval_set):
+        super(Evaluator, self).__init__()
+        self.subj = subj
+        self.data_dir = data_dir
+        self.eval_set = eval_set
+
+    def on_epoch_end(self, callback_data, model, epoch):
+        preds = model.get_outputs(self.eval_set)[:, 1]
+        preds_name = 'eval.'
+        idx_file = os.path.join(self.data_dir, 'eval-' + str(self.subj) + '-' + str(0) + '-index.csv')
+        labels = np.loadtxt(idx_file, delimiter=',', skiprows=1, usecols=[1])
+        auc = metrics.roc_auc_score(labels, preds)
+        print('Eval AUC for subject %d epoch %d: %.4f' % (self.subj, epoch, auc))
 
 parser = NeonArgparser(__doc__)
 parser.add_argument('-elec', '--electrode', default=0, help='electrode index')
@@ -43,18 +57,23 @@ parser.add_argument('-out', '--out_dir', default='preds', help='directory to wri
 parser.add_argument('-validate', '--validate_mode', action="store_true", help="validate on training data")
 
 args = parser.parse_args()
-elec = args.electrode
-data_dir = args.data_dir
+if args.electrode == '-1':
+    from loader import MultiLoader as Loader
+    elecs = range(16)
+    rate = 0.00001
+else:
+    from loader import SingleLoader as Loader
+    rate = 0.0001
+    elecs = args.electrode
+
+data_dir = os.path.normpath(args.data_dir)
 out_dir = args.out_dir
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
+subj = int(data_dir[-1])
 
-if data_dir[-1] != '/':
-    data_dir += '/'
-subj = int(data_dir[-2])
-
-tain = Loader(data_dir, subj, elec, args.validate_mode, training=True)
-test = Loader(data_dir, subj, elec, args.validate_mode, training=False)
+tain = Loader(data_dir, subj, elecs, args.validate_mode, training=True)
+test = Loader(data_dir, subj, elecs, args.validate_mode, training=False)
 
 gauss = Gaussian(scale=0.01)
 glorot = GlorotUniform()
@@ -62,35 +81,32 @@ tiny = dict(str_h=1, str_w=1)
 small = dict(str_h=1, str_w=2)
 big = dict(str_h=1, str_w=4)
 common = dict(batch_norm=True, activation=Rectlin())
-layers = [Conv((3, 5, 128), init=gauss, strides=big, **common),
+layers = [Conv((3, 5, 64), init=gauss, strides=big, **common),
           Pooling(2, strides=2),
           Dropout(0.8),
-          Conv((3, 3, 256), init=gauss, strides=small, **common),
+          Conv((3, 3, 128), init=gauss, strides=small, **common),
           Pooling(2, strides=2),
           Dropout(0.4),
-          Conv((3, 3, 512), init=gauss, strides=tiny, **common),
+          Conv((3, 3, 256), init=gauss, strides=small, **common),
           Dropout(0.2),
-          Conv((2, 2, 1024), init=gauss, strides=tiny, **common),
-          DeepBiRNN(64, init=glorot, reset_cells=True, depth=3, **common),
+          Conv((2, 2, 512), init=gauss, strides=tiny, **common),
+          Conv((2, 2, 128), init=gauss, strides=tiny, **common),
+          DeepBiRNN(64, init=glorot, reset_cells=True, depth=5, **common),
           RecurrentMean(),
           Affine(nout=2, init=gauss, activation=Softmax())]
 
 model = Model(layers=layers)
-opt = Adagrad(learning_rate=0.0001)
+opt = Adagrad(learning_rate=rate)
 callbacks = Callbacks(model, eval_set=test, **args.callback_args)
-cost = GeneralizedCost(costfunc=CrossEntropyBinary())
+if args.validate_mode:
+    evaluator = Evaluator(subj, data_dir, test)
+    callbacks.add_callback(evaluator)
+    preds_name = 'eval.'
+else:
+    preds_name = 'test.'
+cost = GeneralizedCost(costfunc=SumSquared())
 
 model.fit(tain, optimizer=opt, num_epochs=args.epochs, cost=cost, callbacks=callbacks)
 preds = model.get_outputs(test)[:, 1]
-
-if args.validate_mode:
-    preds_name = 'eval.'
-    idx_file = os.path.join(data_dir, 'eval-' + str(subj) + '-' + str(elec) + '-index.csv')
-    labels = np.loadtxt(idx_file, delimiter=',', skiprows=1, usecols=[1])
-    auc = metrics.roc_auc_score(labels, preds)
-    print('Eval AUC for subject %d: %.4f' % (subj, auc))
-else:
-    preds_name = 'test.'
-
-preds_file = preds_name + str(subj) + '.' + str(elec) + '.npy'
+preds_file = preds_name + str(subj) + '.npy'
 np.save(os.path.join(out_dir, preds_file), preds)

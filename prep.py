@@ -71,6 +71,6 @@ if __name__ == '__main__':
         sys.exit(0)
 
     for subj_id in range(1, 4):
-        for prefix in ['train_', 'test_']:
-            path = os.path.join(sys.argv[1], prefix + str(subj_id))
-            extract(path, prefix=='train_')
+        for prefix in ['train_%d', 'test_%d', 'test_%d_new']:
+            path = os.path.join(sys.argv[1], prefix % subj_id)
+            extract(path, prefix == 'train_')

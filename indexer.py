@@ -27,10 +27,15 @@ class Indexer:
         self.subj = subj
         self.validate_mode = validate_mode
         self.training = training
-        self.samp_count = [0, 1267, 2314, 2389][subj]
-        self.scale_factor = 3 * 2389. / self.samp_count
+        if training or validate_mode:
+            self.max_rep_count = 3
+            self.safety_flags = {}
+            par_dir = os.path.dirname(os.path.normpath(repo_dir))
+            safety_file = os.path.join(par_dir, 'train_and_test_data_labels_safe.csv')
+            safety_info = np.loadtxt(safety_file, dtype=str, delimiter=',', skiprows=1)
+            self.safety_flags = {line[0].split('.')[0]: line[2] == '1' for line in safety_info}
 
-    def get_filename(self, path, elec, set_name):
+    def make_filename(self, path, elec, set_name):
         assert os.path.exists(path), 'Path not found: %s' % path
         filename = set_name + '-index.csv'
         idx_file = os.path.join(path, filename)
@@ -45,11 +50,18 @@ class Indexer:
     def get_label(self, filename):
         return int(self.tokenize(filename)[-1])
 
+    def is_safe(self, filename):
+        assert self.training is True or self.validate_mode is True
+        key = os.path.basename(filename).split('.')[0]
+        if key in self.safety_flags:
+            return self.safety_flags[key]
+        return False
+
     def run(self, elec, set_name):
         tain_path = self.repo_dir
-        test_path = tain_path.replace('train', 'test')
+        test_path = tain_path.replace('train', 'test') + '_new'
         path = tain_path if (self.training or self.validate_mode) else test_path
-        idx_file = self.get_filename(path, elec, set_name)
+        idx_file = self.make_filename(path, elec, set_name)
         if os.path.exists(idx_file):
             return idx_file
 
@@ -57,6 +69,8 @@ class Indexer:
         pattern = '*.' + str(elec) + '.wav'
         files = glob.glob(os.path.join(path, pattern))
         assert len(files) > 0, 'No .wav files found in %s' % path
+        if self.training or self.validate_mode:
+            files = filter(lambda x: self.is_safe(x), files)
         files = sorted(map(os.path.basename, files))
         files = sorted(files, key=lambda x: self.get_segm(x))
 
@@ -69,11 +83,27 @@ class Indexer:
         else:
             chosen_files, labels = files, np.zeros(len(files))
 
+        if self.training:
+            self.append_old_test(chosen_files, labels, elec)
+
         with open(idx_file, 'w') as fd:
             fd.write('filename,label\n')
             for filename, label in zip(chosen_files, labels):
                 fd.write(filename + ',' + str(label) + '\n')
         return idx_file
+
+    def append_old_test(self, files, labels, elec):
+        path = self.repo_dir.replace('train', 'test')
+        pattern = '*.' + str(elec) + '.wav'
+        test_files = glob.glob(os.path.join(path, pattern))
+        test_files = sorted(map(os.path.basename, test_files))
+        for filename in test_files:
+            if not self.is_safe(filename):
+                continue
+            filename = os.path.join(os.path.pardir, os.path.basename(path),
+                                    os.path.basename(filename))
+            files.append(filename)
+            labels.append(1)
 
     def choose(self, files):
         train_percent = 70 if self.validate_mode else 100
@@ -97,13 +127,12 @@ class Indexer:
             segm = self.get_segm(filename)
             hour = segm - (segm - 1) % 6
             if self.training and hour > max_hour:
-                assert self.validate_mode is True
                 continue
             if not self.training and hour <= max_hour:
                 continue
             if self.training:
                 # Repeat recent samples.
-                rep_count = int((self.scale_factor * hour) / max_hour) + 1
+                rep_count = ((self.max_rep_count * hour) / max_hour) + 1
             else:
                 rep_count = 1
             for i in range(rep_count):

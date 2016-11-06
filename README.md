@@ -4,8 +4,7 @@ Seizure Prediction
 
 - [Competition page at Kaggle](https://www.kaggle.com/c/melbourne-university-seizure-prediction)
 - This is a proof-of-concept for applying deep learning techniques to EEG data converted into spectrograms.
-- This code builds a separate model for each subject (there are three subjects) and each electrode.
-- Predictions based on all electrodes are averaged to arrive at the final prediction.
+- This code builds a separate model for each subject (there are three subjects).
 
 ### Usage
 
