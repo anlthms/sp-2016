@@ -35,7 +35,7 @@ class Indexer:
             safety_info = np.loadtxt(safety_file, dtype=str, delimiter=',', skiprows=1)
             self.safety_flags = {line[0].split('.')[0]: line[2] == '1' for line in safety_info}
 
-    def make_filename(self, path, elec, set_name):
+    def make_filename(self, path, set_name):
         assert os.path.exists(path), 'Path not found: %s' % path
         filename = set_name + '-index.csv'
         idx_file = os.path.join(path, filename)
@@ -61,7 +61,7 @@ class Indexer:
         tain_path = self.repo_dir
         test_path = tain_path.replace('train', 'test') + '_new'
         path = tain_path if (self.training or self.validate_mode) else test_path
-        idx_file = self.make_filename(path, elec, set_name)
+        idx_file = self.make_filename(path, set_name)
         if os.path.exists(idx_file):
             return idx_file
 
@@ -74,16 +74,12 @@ class Indexer:
         files = sorted(map(os.path.basename, files))
         files = sorted(files, key=lambda x: self.get_segm(x))
 
-        if self.training:
-            np.random.seed(0)
-            np.random.shuffle(files)
-
         if self.training or self.validate_mode:
             chosen_files, labels = self.choose(files)
         else:
             chosen_files, labels = files, np.zeros(len(files))
 
-        if self.training:
+        if self.training and not self.validate_mode:
             self.append_old_test(chosen_files, labels, elec)
 
         with open(idx_file, 'w') as fd:
@@ -102,8 +98,9 @@ class Indexer:
                 continue
             filename = os.path.join(os.path.pardir, os.path.basename(path),
                                     os.path.basename(filename))
-            files.append(filename)
-            labels.append(1)
+            for i in range(self.max_rep_count + 2):
+                files.append(filename)
+                labels.append(1)
 
     def choose(self, files):
         train_percent = 70 if self.validate_mode else 100

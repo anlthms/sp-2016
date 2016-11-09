@@ -26,4 +26,4 @@ then
 fi
 
 data_dir=$1
-rm -ivrf $data_dir/train_?/tain-* $data_dir/train_?/eval-* $data_dir/train_?/full-* $data_dir/test_?/test-*
+rm -ivrf $data_dir/train_?/tain-* $data_dir/train_?/eval-* $data_dir/train_?/full-* $data_dir/train_?/nois-* $data_dir/test_?/test-* $data_dir/test_?_new/test-*

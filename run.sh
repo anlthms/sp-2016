@@ -27,7 +27,6 @@ fi
 
 data_dir=$1
 out_dir=$2
-num_epochs=4
 bsz=64
 prep_file=$data_dir/prepdone
 elec=-1
@@ -54,9 +53,9 @@ do
 
     echo Processing subject $subj...
     # Validate
-    ./model.py -e $num_epochs -w $train_dir -r 0 -z $bsz -v --no_progress_bar -elec $elec -out $out_dir -eval 1 -validate
+    ./model.py -w $train_dir -r 0 -z $bsz -v --no_progress_bar -elec $elec -out $out_dir -eval 1 -validate
     # Test
-    ./model.py -e $num_epochs -w $train_dir -r 0 -z $bsz -v --no_progress_bar -elec $elec -out $out_dir
+    ./model.py -w $train_dir -r 0 -z $bsz -v --no_progress_bar -elec $elec -out $out_dir
 done
 
-./subm.py $data_dir/sample_submission.csv $out_dir
+./subm.py $data_dir $out_dir

@@ -19,14 +19,17 @@ Load data for all the electrodes.
 import numpy as np
 from neon.data import DataLoader, AudioParams, NervanaDataIterator
 from indexer import Indexer
-from prep import ds_factor
+from prep import ds_factor, win_dur
+
+
+# Sampling frequency
+fs = 400 // ds_factor
+# Clip duration in milliseconds
+cd = win_dur * 60 * 1000
 
 
 def init(repo_dir, validate_mode, training):
-    # Sampling frequency
-    fs = 400 // ds_factor
-    # Clip duration in milliseconds
-    cd = 10 * 60 * 1000
+    np.random.seed(0)
     common_params = dict(sampling_freq=fs, clip_duration=cd, frame_duration=512)
     if training:
         media_params = AudioParams(**common_params)

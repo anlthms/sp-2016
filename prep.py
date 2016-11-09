@@ -28,28 +28,31 @@ from scikits import audiolab
 
 # Downsampling factor
 ds_factor = 1
+# Window duration in minutes
+win_dur = 10
+# Number of windows (assuming a stride of 1 minute)
+nwin = 10 - win_dur + 1
 
 
-def extract(path, training):
+def extract(path, fs, training):
     print('Extracting data into %s...' % path)
     files = glob.glob(os.path.join(path, '*.mat'))
     assert len(files) > 0, 'No .mat files found in %s' % path
     for srcfile in files:
-        wavwrite(srcfile, training)
+        wavwrite(srcfile, fs, training)
 
 
-def wavwrite(srcfile, training):
+def wavwrite(srcfile, fs, training):
     try:
         mat = io.loadmat(srcfile)
     except ValueError:
         print('Could not load %s' % srcfile)
         return
 
-    fs = 400
     dat = mat['dataStruct'][0, 0][0]
     if ds_factor != 1:
         dat = signal.decimate(dat, ds_factor, axis=0, zero_phase=True)
-        fs /= ds_factor
+
     mn = dat.min()
     mx = dat.max()
     mx = float(max(abs(mx), abs(mn)))
@@ -60,17 +63,27 @@ def wavwrite(srcfile, training):
         dat *= 0x7FFF / mx
     dat = np.int16(dat)
 
+    winsize = win_dur * 60 * fs
+    stride = 60 * fs
     for elec in range(16):
-        dstfile = srcfile.replace('mat', str(elec) + '.wav')
         aud = dat[:, elec]
-        audiolab.wavwrite(aud, dstfile, fs=fs, enc='pcm16')
+        for win in range(nwin):
+            dstfile = srcfile.replace('mat', str(win) + '.' + str(elec) + '.wav')
+            beg = win * stride
+            end = beg + winsize
+            clip = aud[beg:end]
+            audiolab.wavwrite(clip, dstfile, fs=fs, enc='pcm16')
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print('Usage %s /path/to/data' % sys.argv[0])
         sys.exit(0)
 
+    fs = 400
+    if ds_factor != 1:
+        fs /= ds_factor
     for subj_id in range(1, 4):
-        for prefix in ['train_%d', 'test_%d', 'test_%d_new']:
-            path = os.path.join(sys.argv[1], prefix % subj_id)
-            extract(path, prefix == 'train_')
+        for template in ['train_%d', 'test_%d', 'test_%d_new']:
+            path = os.path.join(sys.argv[1], template % subj_id)
+            extract(path, fs, template == 'train_%d')
