@@ -22,9 +22,8 @@ import numpy as np
 
 
 class Indexer:
-    def __init__(self, repo_dir, subj, validate_mode, training):
+    def __init__(self, repo_dir, validate_mode, training):
         self.repo_dir = repo_dir
-        self.subj = subj
         self.validate_mode = validate_mode
         self.training = training
         if training or validate_mode:
@@ -34,6 +33,9 @@ class Indexer:
             safety_file = os.path.join(par_dir, 'train_and_test_data_labels_safe.csv')
             safety_info = np.loadtxt(safety_file, dtype=str, delimiter=',', skiprows=1)
             self.safety_flags = {line[0].split('.')[0]: line[2] == '1' for line in safety_info}
+            self.segm_idx = 1
+        else:
+            self.segm_idx = 2
 
     def make_filename(self, path, set_name):
         assert os.path.exists(path), 'Path not found: %s' % path
@@ -45,7 +47,7 @@ class Indexer:
         return filename.split('.')[0].split('_')
 
     def get_segm(self, filename):
-        return int(self.tokenize(filename)[1])
+        return int(self.tokenize(filename)[self.segm_idx])
 
     def get_label(self, filename):
         return int(self.tokenize(filename)[-1])

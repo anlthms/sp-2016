@@ -47,7 +47,7 @@ class SingleLoader(DataLoader):
 
     def __init__(self, repo_dir, subj, elec, validate_mode, training):
         media_params, set_name, data_dir = init(repo_dir, validate_mode, training)
-        indexer = Indexer(repo_dir, subj, validate_mode, training)
+        indexer = Indexer(repo_dir, validate_mode, training)
         set_name = set_name + '-' + str(subj) + '-' + str(elec)
         index_file = indexer.run(elec, set_name)
         super(SingleLoader, self).__init__(
@@ -63,7 +63,7 @@ class MultiLoader(NervanaDataIterator):
         nelecs = len(elecs)
         self.elecs = elecs
         media_params, set_name_prefix, data_dir = init(repo_dir, validate_mode, training)
-        indexer = Indexer(repo_dir, subj, validate_mode, training)
+        indexer = Indexer(repo_dir, validate_mode, training)
         self.loaders = []
         for elec in elecs:
             set_name = set_name_prefix + '-' + str(subj) + '-' + str(elec)
